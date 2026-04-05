@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AURUM — Immersive Menu</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Josefin+Sans:wght@100;200;300&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --gold: #c9a84c;
+  --gold-light: #e8c97a;
+  --gold-dim: rgba(201,168,76,0.3);
+  --dark: #06050300;
+  --cream: #f0e8d5;
+  --cream-dim: #9e8f76;
+}
+
+html, body {
+  width:100%; height:100%;
+  overflow: hidden;
+  background: #060503;
+  font-family: 'Josefin Sans', sans-serif;
+  font-weight: 300;
+  color: var(--cream);
+  cursor: none;
+}
+
+/* Custom cursor */
+#cursor {
+  position: fixed;
+  width: 8px; height: 8px;
+  background: var(--gold);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%,-50%);
+  transition: transform 0.1s;
+  box-shadow: 0 0 12px var(--gold);
+}
+
+
+/* Three.js canvas — full background */
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+/* Vignette overlay */
+#vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(6,5,3,0.85) 100%);
+  pointer-events: none;
+}
+
+/* Noise texture */
+#noise {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* Main scroll container */
+#app {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow: hidden;
+}
+
+/* All panels */
+.panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1);
+  padding: 20px;
+}
+.panel.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ── INTRO PANEL ── */
+#panel-intro .eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.6em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  animation: none;
+}
+#panel-intro .main-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(72px, 16vw, 140px);
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  color: var(--cream);
+  line-height: 0.9;
+  text-align: center;
+}
+#panel-intro .main-title em {
+  color: var(--gold);
+  font-style: italic;
+  display: block;
+}
+#panel-intro .tagline {
+  font-size: 10px;
+  letter-spacing: 0.45em;
+  color: var(--cream-dim);
+  text-transform: uppercase;
+  margin-top: 28px;
+}
+#panel-intro .begin-btn {
+  margin-top: 52px;
+  background: none;
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  padding: 16px 40px;
+  cursor: none;
+  transition: all 0.4s;
+  position: relative;
+  overflow: hidden;
+}
+#panel-intro .begin-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(201,168,76,0.08);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s;
+}
+#panel-intro .begin-btn:hover::before { transform: scaleX(1); }
+#panel-intro .begin-btn:hover {
+  border-color: var(--gold);
+  box-shadow: 0 0 30px rgba(201,168,76,0.1);
+}
+
+/* ── CATEGORY NAV PANEL ── */
+#panel-nav {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+}
+#panel-nav .nav-label {
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  letter-spacing: 0.5em;
+  color: var(--cream-dim);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.cat-btn {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(201,168,76,0.15);
+  color: var(--cream);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(22px, 4vw, 32px);
+  font-style: italic;
+  font-weight: 300;
+  padding: 20px 36px;
+  cursor: none;
+  transition: all 0.4s cubic-bezier(0.23,1,0.32,1);
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  letter-spacing: 0.05em;
+}
+.cat-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(201,168,76,0.08), transparent);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.cat-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  transform: scale(1.05) translateZ(20px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(201,168,76,0.08);
+}
+.cat-btn:hover::before { opacity: 1; }
+
+/* Back button */
+.back-btn {
+  position: fixed;
+  top: 28px;
+  left: 32px;
+  z-index: 200;
+  background: none;
+  border: 1px solid rgba(201,168,76,0.2);
+  color: var(--cream-dim);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 8px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  cursor: none;
+  transition: all 0.3s;
+  opacity: 0;
+  pointer-events: none;
+}
+.back-btn.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+.back-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ── MENU PANEL ── */
+.menu-panel {
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: 80px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201,168,76,0.2) transparent;
+}
+.menu-panel::-webkit-scrollbar { width: 2px; }
+.menu-panel::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); }
+
+.menu-panel-inner {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.menu-panel-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(48px, 10vw, 90px);
+  font-weight: 300;
+  font-style: italic;
+  color: var(--cream);
+  text-align: center;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+.menu-panel-sub {
+  font-size: 9px;
+  letter-spacing: 0.5em;
+  color: var(--gold);
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding-bottom: 60px;
+}
+
+/* ── 3D MENU ITEM CARD ── */
+.item-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(201,168,76,0.12);
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+  cursor: none;
+  transition: all 0.5s cubic-bezier(0.23,1,0.32,1);
+  transform-style: preserve-3d;
+}
+.item-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.item-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(201,168,76,0.05) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.item-card:hover {
+  border-color: rgba(201,168,76,0.4);
+  transform: translateY(-8px) rotateX(3deg);
+  box-shadow:
+    0 30px 80px rgba(0,0,0,0.7),
+    0 0 60px rgba(201,168,76,0.06),
+    inset 0 0 40px rgba(201,168,76,0.02);
+}
+.item-card:hover::before,
+.item-card:hover::after { opacity: 1; }
+
+.item-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.type-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.type-dot.veg { background: #5aad70; box-shadow: 0 0 8px #5aad70; }
+.type-dot.non { background: #c0504d; box-shadow: 0 0 8px #c0504d; }
+.type-label {
+  font-size: 8px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--cream-dim);
+}
+.item-badge {
+  margin-left: auto;
+  font-size: 7.5px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px solid rgba(201,168,76,0.25);
+  padding: 3px 8px;
+}
+
+.item-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--cream);
+  margin-bottom: 10px;
+  line-height: 1.2;
+}
+.item-desc {
+  font-size: 10px;
+  color: var(--cream-dim);
+  line-height: 1.9;
+  letter-spacing: 0.02em;
+  margin-bottom: 22px;
+}
+.item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.item-price {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 30px;
+  font-weight: 300;
+  color: var(--gold);
+  line-height: 1;
+}
+.item-price sup { font-size: 14px; vertical-align: super; opacity: 0.7; }
+.item-sub { font-size: 8px; letter-spacing: 0.2em; color: var(--cream-dim); opacity: 0.5; text-transform: uppercase; }
+
+/* ── SCROLL HINT ── */
+.scroll-hint {
+  position: fixed;
+  bottom: 30px;
+  right: 32px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.4;
+}
+.scroll-hint span {
+  font-size: 7px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--cream-dim);
+  writing-mode: vertical-rl;
+}
+.scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(180deg, var(--gold), transparent);
+  animation: scrollPulse 2s ease infinite;
+}
+@keyframes scrollPulse {
+  0%,100% { opacity: 0.3; transform: scaleY(1); }
+  50% { opacity: 1; transform: scaleY(1.3); }
+}
+
+/* Page counter */
+.page-indicator {
+  position: fixed;
+  bottom: 30px;
+  left: 32px;
+  z-index: 100;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 11px;
+  color: var(--cream-dim);
+  letter-spacing: 0.2em;
+  opacity: 0.4;
+}
+
+/* Horizontal gold line top */
+.top-line {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+  z-index: 100;
+}
+
+/* Transitions */
+.panel { transform: translateY(30px); transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1); }
+.panel.active { transform: translateY(0); }
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@media (max-width: 600px) {
+  .items-grid { grid-template-columns: 1fr; }
+  #panel-nav { gap: 12px; }
+  .cat-btn { font-size: 20px; padding: 16px 28px; }
+  #cursor { display: none; }
+  body { cursor: auto; }
+  button { cursor: pointer; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div id="vignette"></div>
+<div id="noise"></div>
+<div id="cursor"></div>
+
+<div class="top-line"></div>
+
+<div id="app">
+
+  <!-- INTRO -->
+  <div class="panel active" id="panel-intro">
+    <div class="eyebrow">Est. 2019 · Fine Dining Experience</div>
+    <div class="main-title">Au<em>rum</em></div>
+    <div class="tagline">Where every meal becomes a memory</div>
+    <button class="begin-btn" onclick="goNav()">Explore the Menu</button>
+  </div>
+
+  <!-- CATEGORY NAV -->
+  <div class="panel" id="panel-nav">
+    <div class="nav-label">Select a course to explore</div>
+    <button class="cat-btn" onclick="openMenu('starters')">Starters</button>
+    <button class="cat-btn" onclick="openMenu('mains')">Mains</button>
+    <button class="cat-btn" onclick="openMenu('sides')">Sides</button>
+    <button class="cat-btn" onclick="openMenu('desserts')">Desserts</button>
+    <button class="cat-btn" onclick="openMenu('drinks')">Drinks</button>
+  </div>
+
+  <!-- STARTERS -->
+  <div class="panel menu-panel" id="panel-starters">
+    <div class="menu-panel-inner">
+      <div class="menu-panel-title">Starters</div>
+      <div class="menu-panel-sub">To Begin · Small Plates</div>
+      <div class="items-grid">
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Vegetarian</span><span class="item-badge">Chef's Pick</span></div>
+          <div class="item-name">Truffle Arancini</div>
+          <div class="item-desc">Crispy saffron risotto balls, black truffle cream, aged parmesan snow, microgreens, edible gold leaf</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>420</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot non"></span><span class="type-label">Non-Veg</span><span class="item-badge">Signature</span></div>
+          <div class="item-name">Seared Scallops</div>
+          <div class="item-desc">Pan-seared scallops, cauliflower purée, crispy pancetta, caper beurre blanc, caviar pearls</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>680</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Vegetarian</span><span class="item-badge">Seasonal</span></div>
+          <div class="item-name">Burrata & Heritage Tomato</div>
+          <div class="item-desc">Imported burrata, heirloom tomatoes, basil oil, aged 25yr balsamic, toasted sourdough</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>540</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot non"></span><span class="type-label">Non-Veg</span><span class="item-badge">New</span></div>
+          <div class="item-name">Foie Gras Torchon</div>
+          <div class="item-desc">Duck foie gras, fig jam, brioche toast, micro herbs, port wine reduction</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>860</div><div class="item-sub">Per Serving</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAINS -->
+  <div class="panel menu-panel" id="panel-mains">
+    <div class="menu-panel-inner">
+      <div class="menu-panel-title">Main Course</div>
+      <div class="menu-panel-sub">The Heart · Centrepiece Plates</div>
+      <div class="items-grid">
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot non"></span><span class="type-label">Non-Veg</span><span class="item-badge">Premium</span></div>
+          <div class="item-name">Wagyu Striploin</div>
+          <div class="item-desc">250g A4 wagyu, pomme purée, roasted bone marrow jus, charred broccolini, herb oil, fleur de sel</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>2,400</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Vegetarian</span><span class="item-badge">Chef's Pick</span></div>
+          <div class="item-name">Wild Mushroom Risotto</div>
+          <div class="item-desc">Porcini, chanterelle, shimeji, arborio, white wine reduction, aged parmigiano, black truffle</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>780</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot non"></span><span class="type-label">Non-Veg</span><span class="item-badge">Signature</span></div>
+          <div class="item-name">Miso Glazed Salmon</div>
+          <div class="item-desc">Atlantic salmon, white miso glaze, edamame purée, pickled daikon, sesame dashi broth</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>1,100</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Vegan</span><span class="item-badge">Plant-Based</span></div>
+          <div class="item-name">Cauliflower Steak</div>
+          <div class="item-desc">Whole roasted cauliflower, chermoula, pomegranate molasses, toasted almonds, harissa broth</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>680</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot non"></span><span class="type-label">Non-Veg</span><span class="item-badge">New</span></div>
+          <div class="item-name">Duck Confit</div>
+          <div class="item-desc">72hr slow-cooked duck leg, lentil cassoulet, cherry jus, crispy skin, roasted root vegetables</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>1,350</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot non"></span><span class="type-label">Non-Veg</span><span class="item-badge">Bestseller</span></div>
+          <div class="item-name">Lobster Thermidor</div>
+          <div class="item-desc">Half Boston lobster, cream, cognac, gruyere gratin, fresh tarragon, garlic butter</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>2,800</div><div class="item-sub">Per Serving</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDES -->
+  <div class="panel menu-panel" id="panel-sides">
+    <div class="menu-panel-inner">
+      <div class="menu-panel-title">Sides</div>
+      <div class="menu-panel-sub">Accompaniments · Small Plates</div>
+      <div class="items-grid">
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Vegetarian</span><span class="item-badge">Most Ordered</span></div>
+          <div class="item-name">Truffle Fries</div>
+          <div class="item-desc">Double-fried Belgian potato, Périgord truffle oil, rosemary sea salt, aged parmesan</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>320</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Vegetarian</span><span class="item-badge">Seasonal</span></div>
+          <div class="item-name">Roasted Asparagus</div>
+          <div class="item-desc">Blanched green asparagus, brown butter, shaved almonds, lemon zest, sea salt</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>280</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Vegetarian</span><span class="item-badge">Classic</span></div>
+          <div class="item-name">Pomme Purée</div>
+          <div class="item-desc">Robuchon-style potato, cultured butter, chives, crème fraîche, grey salt</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>260</div><div class="item-sub">Per Serving</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DESSERTS -->
+  <div class="panel menu-panel" id="panel-desserts">
+    <div class="menu-panel-inner">
+      <div class="menu-panel-title">Desserts</div>
+      <div class="menu-panel-sub">Sweet Finale · The Last Act</div>
+      <div class="items-grid">
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Signature</span><span class="item-badge">Chef's Pick</span></div>
+          <div class="item-name">Valrhona Fondant</div>
+          <div class="item-desc">70% dark chocolate, molten lava centre, Madagascar vanilla ice cream, 24k gold dust</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>420</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Vegetarian</span><span class="item-badge">Seasonal</span></div>
+          <div class="item-name">Mango Panna Cotta</div>
+          <div class="item-desc">Alphonso mango purée, coconut panna cotta, passion fruit gel, tuile, microbasil</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>360</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Vegetarian</span><span class="item-badge">Classic</span></div>
+          <div class="item-name">Crème Brûlée</div>
+          <div class="item-desc">Classic vanilla custard, live torched caramel crust, fresh seasonal berries, shortbread</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>340</div><div class="item-sub">Per Serving</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Vegetarian</span><span class="item-badge">New</span></div>
+          <div class="item-name">Pistachio Soufflé</div>
+          <div class="item-desc">Live-baked pistachio soufflé, 18min wait, crème anglaise, rose-water ice cream</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>480</div><div class="item-sub">18min wait</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRINKS -->
+  <div class="panel menu-panel" id="panel-drinks">
+    <div class="menu-panel-inner">
+      <div class="menu-panel-title">Drinks</div>
+      <div class="menu-panel-sub">Libations · Craft Beverages</div>
+      <div class="items-grid">
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Mocktail</span><span class="item-badge">Bestseller</span></div>
+          <div class="item-name">Rose Lychee Mist</div>
+          <div class="item-desc">Lychee juice, rose water, tonic, basil seed, edible flowers, frozen rose petals</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>280</div><div class="item-sub">No Alcohol</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Hot</span><span class="item-badge">Wellness</span></div>
+          <div class="item-name">Ceremonial Matcha</div>
+          <div class="item-desc">Grade-A Uji ceremonial matcha, oat milk, raw honey, soft microfoam</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>220</div><div class="item-sub">Per Cup</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Cold Brew</span><span class="item-badge">House</span></div>
+          <div class="item-name">24hr Cold Brew</div>
+          <div class="item-desc">Single origin Ethiopian Yirgacheffe, cold-steeped 24 hours, crystal ice, optional oat</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>240</div><div class="item-sub">Per Glass</div></div>
+        </div>
+        <div class="item-card">
+          <div class="item-type"><span class="type-dot veg"></span><span class="type-label">Mocktail</span><span class="item-badge">New</span></div>
+          <div class="item-name">Smoked Citrus Sour</div>
+          <div class="item-desc">Yuzu, lemon, smoked rosemary, aquafaba foam, activated charcoal bitters, smoke cloche</div>
+          <div class="item-footer"><div class="item-price"><sup>₹</sup>320</div><div class="item-sub">Table-Side Smoke</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Back button -->
+<button class="back-btn" id="backBtn" onclick="goBack()">← Back</button>
+
+<!-- Scroll hint -->
+<div class="scroll-hint" id="scrollHint" style="display:none">
+  <div class="scroll-line"></div>
+  <span>Scroll</span>
+</div>
+
+<!-- Page indicator -->
+<div class="page-indicator" id="pageIndicator"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── THREE.JS BACKGROUND ──
+const canvas = document.getElementById('bg-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.z = 50;
+
+// Gold particles
+const particleCount = 280;
+const geometry = new THREE.BufferGeometry();
+const positions = new Float32Array(particleCount * 3);
+const sizes = new Float32Array(particleCount);
+const speeds = [];
+const phases = [];
+
+for (let i = 0; i < particleCount; i++) {
+  positions[i*3]   = (Math.random()-0.5)*180;
+  positions[i*3+1] = (Math.random()-0.5)*120;
+  positions[i*3+2] = (Math.random()-0.5)*80;
+  sizes[i] = Math.random() * 2.5 + 0.5;
+  speeds.push(Math.random() * 0.003 + 0.001);
+  phases.push(Math.random() * Math.PI * 2);
+}
+
+geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+const particleMaterial = new THREE.ShaderMaterial({
+  uniforms: { time: { value: 0 }, color: { value: new THREE.Color(0xc9a84c) } },
+  vertexShader: `
+    attribute float size;
+    uniform float time;
+    varying float vAlpha;
+    void main() {
+      vec3 pos = position;
+      pos.y += sin(time * 0.5 + pos.x * 0.05) * 2.0;
+      pos.x += cos(time * 0.3 + pos.y * 0.04) * 1.5;
+      vAlpha = 0.3 + 0.4 * sin(time + pos.z);
+      vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
+      gl_PointSize = size * (300.0 / -mvPos.z);
+      gl_Position = projectionMatrix * mvPos;
+    }
+  `,
+  fragmentShader: `
+    uniform vec3 color;
+    varying float vAlpha;
+    void main() {
+      float d = length(gl_PointCoord - vec2(0.5));
+      if (d > 0.5) discard;
+      float alpha = smoothstep(0.5, 0.0, d) * vAlpha;
+      gl_FragColor = vec4(color, alpha);
+    }
+  `,
+  transparent: true,
+  depthWrite: false,
+});
+
+const particles = new THREE.Points(geometry, particleMaterial);
+scene.add(particles);
+
+// 3D floating geometric shapes
+const shapes = [];
+const shapeGeo = [
+  new THREE.OctahedronGeometry(2, 0),
+  new THREE.TetrahedronGeometry(1.8, 0),
+  new THREE.IcosahedronGeometry(1.5, 0),
+];
+const shapeMat = new THREE.MeshBasicMaterial({
+  color: 0xc9a84c,
+  wireframe: true,
+  transparent: true,
+  opacity: 0.07,
+});
+
+for (let i = 0; i < 12; i++) {
+  const geo = shapeGeo[i % 3];
+  const mesh = new THREE.Mesh(geo, shapeMat.clone());
+  mesh.position.set(
+    (Math.random()-0.5)*160,
+    (Math.random()-0.5)*100,
+    (Math.random()-0.5)*60 - 10
+  );
+  mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+  const s = Math.random()*2+0.8;
+  mesh.scale.set(s,s,s);
+  scene.add(mesh);
+  shapes.push({ mesh, speed: Math.random()*0.004+0.001, phase: Math.random()*Math.PI*2 });
+}
+
+// Mouse influence
+let mouseX = 0, mouseY = 0;
+let targetX = 0, targetY = 0;
+document.addEventListener('mousemove', e => {
+  mouseX = (e.clientX/window.innerWidth - 0.5) * 2;
+  mouseY = (e.clientY/window.innerHeight - 0.5) * 2;
+});
+
+let t = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  t += 0.01;
+  particleMaterial.uniforms.time.value = t;
+
+  targetX += (mouseX - targetX) * 0.02;
+  targetY += (mouseY - targetY) * 0.02;
+
+  particles.rotation.y = targetX * 0.08;
+  particles.rotation.x = -targetY * 0.04;
+
+  shapes.forEach(({ mesh, speed, phase }) => {
+    mesh.rotation.x += speed;
+    mesh.rotation.y += speed * 0.7;
+    mesh.position.y += Math.sin(t*0.5 + phase) * 0.02;
+  });
+
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ── CURSOR ──
+const cur = document.getElementById('cursor');
+document.addEventListener('mousemove', e => {
+  cur.style.left = e.clientX+'px';
+  cur.style.top = e.clientY+'px';
+});
+
+// ── NAV LOGIC ──
+let currentPanel = 'intro';
+const panels = document.querySelectorAll('.panel');
+const back = document.getElementById('backBtn');
+const scrollHint = document.getElementById('scrollHint');
+const pageIndicator = document.getElementById('pageIndicator');
+
+function showPanel(id) {
+  panels.forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  currentPanel = id;
+  const isMenu = !['intro','nav'].includes(id);
+  back.className = 'back-btn' + (id !== 'intro' ? ' visible' : '');
+  scrollHint.style.display = isMenu ? 'flex' : 'none';
+  pageIndicator.textContent = isMenu ? id.charAt(0).toUpperCase()+id.slice(1) : '';
+}
+
+function goNav() { showPanel('nav'); }
+function openMenu(cat) { showPanel(cat); }
+function goBack() {
+  if (currentPanel === 'nav') showPanel('intro');
+  else showPanel('nav');
+}
+
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') goBack();
+});
+
+// ── 3D CARD TILT ──
+document.querySelectorAll('.item-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    const x = (e.clientX - r.left)/r.width - 0.5;
+    const y = (e.clientY - r.top)/r.height - 0.5;
+    card.style.transform = `translateY(-8px) rotateX(${-y*10}deg) rotateY(${x*10}deg)`;
+  });
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = '';
+  });
+});
+</script>
+</body>
+</html>
