@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>AURUM — An Experience</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Space+Mono:wght@400;700&family=Josefin+Sans:wght@100;200;300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold:#c9a84c; --gold-l:#e8c97a; --dark:#060503;
+  --cream:#f0e8d5; --cream-d:#9e8f76;
+  --tp:#c9a84c; --tg:rgba(201,168,76,0.15);
+}
+body[data-cat="starters"]{ --tp:#e8a020; --tg:rgba(232,160,32,0.18); }
+body[data-cat="mains"]   { --tp:#c0392b; --tg:rgba(192,57,43,0.18);  }
+body[data-cat="sides"]   { --tp:#27ae60; --tg:rgba(39,174,96,0.18);  }
+body[data-cat="desserts"]{ --tp:#c0608a; --tg:rgba(192,96,138,0.18); }
+body[data-cat="drinks"]  { --tp:#16a085; --tg:rgba(22,160,133,0.18); }
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#060503;
+  font-family:'Josefin Sans',sans-serif;font-weight:300;color:var(--cream);cursor:none;}
+
+/* LOADER */
+#loader{position:fixed;inset:0;z-index:1000;background:#020201;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:opacity .8s ease;}
+#loader.out{opacity:0;pointer-events:none;}
+.ld-logo{font-family:'Cormorant Garamond',serif;font-size:clamp(52px,13vw,110px);
+  font-weight:300;letter-spacing:.3em;position:relative;overflow:hidden;}
+.ld-logo span{display:inline-block;color:var(--cream);opacity:0;
+  transform:translateY(22px);animation:ltIn .5s ease forwards;}
+.ld-logo span:nth-child(1){animation-delay:.1s}
+.ld-logo span:nth-child(2){animation-delay:.24s}
+.ld-logo span:nth-child(3){animation-delay:.38s}
+.ld-logo span:nth-child(4){animation-delay:.52s}
+.ld-logo span:nth-child(5){animation-delay:.66s}
+.ld-scan{position:absolute;top:0;left:-120%;width:70%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(201,168,76,.5),transparent);
+  animation:scan 1.4s ease .9s forwards;}
+.ld-bar{width:180px;height:1px;background:rgba(255,255,255,.08);margin-top:36px;position:relative;overflow:hidden;}
+.ld-bar::after{content:'';position:absolute;top:0;left:0;height:100%;width:0;
+  background:var(--gold);animation:barF 2s ease .4s forwards;}
+.ld-sub{font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.5em;
+  color:var(--cream-d);text-transform:uppercase;margin-top:14px;
+  opacity:0;animation:fIn .5s ease .5s forwards;}
+
+/* BG / OVERLAYS */
+#bg{position:fixed;inset:0;z-index:0;}
+#vig{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 18%,rgba(6,5,3,.82) 100%);}
+#noise{position:fixed;inset:0;z-index:2;opacity:.035;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+/* CURSOR */
+#cur{position:fixed;width:10px;height:10px;border-radius:50%;
+  background:var(--tp);pointer-events:none;z-index:9999;
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 18px var(--tp);
+  transition:background .6s,box-shadow .6s,width .2s,height .2s;
+  mix-blend-mode:screen;}
+#cur.big{width:22px;height:22px;opacity:.5;}
+
+/* TOP LINE */
+.tl{position:fixed;top:0;left:0;right:0;height:1px;z-index:100;
+  background:linear-gradient(90deg,transparent,var(--tp),transparent);
+  transition:background .8s;}
+
+/* UI CHROME */
+.brand{position:fixed;top:22px;left:30px;z-index:200;
+  font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.22em;
+  color:var(--tp);opacity:0;transition:opacity .5s,color .8s;}
+.brand.on{opacity:1;}
+
+#sndBtn{position:fixed;top:18px;right:30px;z-index:200;background:none;
+  border:1px solid rgba(255,255,255,.12);color:var(--cream-d);
+  font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.3em;
+  padding:8px 16px;cursor:none;transition:all .3s;opacity:0;pointer-events:none;}
+#sndBtn.on{opacity:1;pointer-events:all;}
+#sndBtn.playing{border-color:var(--tp);color:var(--tp);}
+#sndBtn:hover{transform:scale(1.05);}
+
+#bkBtn{position:fixed;bottom:30px;left:30px;z-index:200;background:none;
+  border:1px solid rgba(255,255,255,.1);color:var(--cream-d);
+  font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.3em;
+  padding:10px 20px;cursor:none;transition:all .3s;opacity:0;pointer-events:none;}
+#bkBtn.on{opacity:1;pointer-events:all;}
+#bkBtn:hover{border-color:var(--tp);color:var(--tp);}
+
+#catLbl{position:fixed;bottom:30px;right:30px;z-index:200;
+  font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.45em;
+  color:var(--tp);text-transform:uppercase;opacity:0;transition:opacity .5s,color .8s;}
+#catLbl.on{opacity:.65;}
+
+.pk{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:100;
+  font-family:'Space Mono',monospace;font-size:7px;letter-spacing:.5em;
+  color:var(--cream-d);opacity:.18;pointer-events:none;white-space:nowrap;}
+
+/* PANELS */
+#app{position:fixed;inset:0;z-index:10;overflow:hidden;}
+.panel{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;
+  transform:translateY(36px);
+  transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);}
+.panel.active{opacity:1;pointer-events:all;transform:translateY(0);}
+.panel.exit{opacity:0;transform:translateY(-36px);pointer-events:none;}
+
+/* INTRO */
+#pi .eye{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.6em;
+  color:var(--gold);text-transform:uppercase;margin-bottom:20px;
+  opacity:0;animation:fIn .8s ease .3s forwards;}
+#pi .ttl{font-family:'Cormorant Garamond',serif;font-size:clamp(68px,15vw,130px);
+  font-weight:300;letter-spacing:.2em;line-height:1;color:var(--cream);
+  opacity:0;animation:fUp .9s ease .5s forwards;}
+#pi .ttl em{font-style:italic;color:var(--gold);}
+#pi .tag{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.35em;
+  color:var(--cream-d);margin-top:16px;opacity:0;animation:fIn .8s ease .8s forwards;}
+
+/* TICKER */
+.tick-wrap{width:min(340px,88vw);overflow:hidden;border:1px solid rgba(201,168,76,.18);
+  margin:28px 0;opacity:0;animation:fIn .8s ease 1s forwards;}
+.tick-inner{display:flex;animation:tickScroll 22s linear infinite;white-space:nowrap;}
+.ti{font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.08em;
+  padding:6px 20px;border-right:1px solid rgba(201,168,76,.1);flex-shrink:0;}
+.ti .tn{color:var(--gold);margin-right:8px;}
+.ti .tp{color:var(--cream-d);}
+
+/* CTA */
+.cta{background:none;border:1px solid rgba(201,168,76,.28);color:var(--gold);
+  font-family:'Josefin Sans',sans-serif;font-size:9px;letter-spacing:.6em;
+  text-transform:uppercase;padding:16px 48px;cursor:none;
+  position:relative;overflow:hidden;transition:all .4s;
+  opacity:0;animation:fIn .8s ease 1.2s forwards;}
+.cta::before{content:'';position:absolute;inset:0;
+  background:rgba(201,168,76,.07);transform:scaleX(0);
+  transform-origin:left;transition:transform .4s cubic-bezier(.23,1,.32,1);}
+.cta:hover::before{transform:scaleX(1);}
+.cta:hover{border-color:var(--gold);box-shadow:0 0 40px rgba(201,168,76,.1);}
+
+/* NAV (orbs) */
+#pn .ntl{font-family:'Cormorant Garamond',serif;font-size:clamp(18px,4vw,28px);
+  font-style:italic;color:var(--cream-d);letter-spacing:.08em;
+  margin-bottom:44px;text-align:center;}
+.orbs{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;max-width:860px;}
+.orb{position:relative;width:138px;height:138px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;cursor:none;
+  transition:transform .4s cubic-bezier(.23,1,.32,1);}
+.orb-bg{position:absolute;inset:0;border-radius:50%;
+  border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);
+  transition:all .4s cubic-bezier(.23,1,.32,1);}
+.orb-ring{position:absolute;inset:-8px;border-radius:50%;
+  border:1px solid transparent;
+  animation:orbP 3.5s ease infinite;transition:all .5s ease;}
+.orb:hover{transform:translateY(-10px);}
+.orb:hover .orb-bg{transform:scale(1.1);border-color:var(--oc);
+  box-shadow:0 0 60px var(--og),inset 0 0 30px rgba(255,255,255,.03);}
+.orb:hover .orb-ring{border-color:var(--oc);opacity:.3;inset:-20px;}
+.orb-name{font-family:'Cormorant Garamond',serif;font-size:19px;font-style:italic;
+  color:var(--cream);position:relative;z-index:1;transition:color .4s;text-align:center;}
+.orb-cnt{font-family:'Space Mono',monospace;font-size:8px;color:var(--cream-d);
+  position:relative;z-index:1;margin-top:4px;opacity:.45;transition:all .4s;}
+.orb:hover .orb-name{color:var(--oc);}
+.orb:hover .orb-cnt{color:var(--oc);opacity:.9;}
+
+/* MENU PANEL */
+.mp{justify-content:flex-start;padding:86px 20px 40px;
+  overflow-y:auto;overflow-x:hidden;
+  scrollbar-width:thin;scrollbar-color:var(--tp) transparent;}
+.mp::-webkit-scrollbar{width:2px;}
+.mp::-webkit-scrollbar-thumb{background:var(--tp);border-radius:2px;}
+.mi{width:100%;max-width:1100px;margin:0 auto;}
+
+.mh{text-align:center;margin-bottom:14px;}
+.mh-sub{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.5em;
+  color:var(--tp);text-transform:uppercase;transition:color .8s;}
+.mh-ttl{font-family:'Cormorant Garamond',serif;
+  font-size:clamp(48px,10vw,82px);font-weight:300;font-style:italic;
+  color:var(--cream);line-height:1;margin:8px 0 28px;}
+.hdiv{display:flex;align-items:center;gap:14px;justify-content:center;margin-bottom:38px;}
+.hdiv::before,.hdiv::after{content:'';flex:1;max-width:90px;height:1px;}
+.hdiv::before{background:linear-gradient(90deg,transparent,var(--tp));}
+.hdiv::after{background:linear-gradient(90deg,var(--tp),transparent);}
+.hdot{width:5px;height:5px;border-radius:50%;background:var(--tp);
+  box-shadow:0 0 10px var(--tp);transition:background .8s,box-shadow .8s;}
+
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));
+  gap:16px;padding-bottom:60px;}
+
+/* FLIP CARD */
+.fc{height:240px;perspective:1200px;cursor:none;
+  opacity:0;animation:cIn .6s ease forwards;}
+.fc:nth-child(1){animation-delay:.05s}.fc:nth-child(2){animation-delay:.12s}
+.fc:nth-child(3){animation-delay:.19s}.fc:nth-child(4){animation-delay:.26s}
+.fc:nth-child(5){animation-delay:.33s}.fc:nth-child(6){animation-delay:.40s}
+.fi{position:relative;width:100%;height:100%;
+  transform-style:preserve-3d;transition:transform .7s cubic-bezier(.23,1,.32,1);}
+.fc.fl .fi{transform:rotateY(180deg);}
+.ff,.fb{position:absolute;inset:0;backface-visibility:hidden;
+  border:1px solid rgba(255,255,255,.08);padding:24px;
+  background:rgba(255,255,255,.02);
+  transition:border-color .4s,box-shadow .4s;}
+.ff:hover,.fb:hover{border-color:var(--tp);
+  box-shadow:0 20px 60px rgba(0,0,0,.55),0 0 40px var(--tg);}
+.ff::after{content:'TAP FOR DETAILS';position:absolute;bottom:14px;right:14px;
+  font-family:'Space Mono',monospace;font-size:6px;letter-spacing:.3em;
+  color:var(--tp);opacity:.35;transition:opacity .4s;}
+.ff:hover::after{opacity:.8;}
+.fb{transform:rotateY(180deg);background:rgba(255,255,255,.03);
+  display:flex;flex-direction:column;justify-content:space-between;}
+.fb::after{content:'TAP TO CLOSE';position:absolute;bottom:14px;right:14px;
+  font-family:'Space Mono',monospace;font-size:6px;letter-spacing:.3em;
+  color:var(--tp);opacity:.35;}
+
+/* Card internals */
+.cbr{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.dv{background:#5aad70;box-shadow:0 0 8px #5aad70;}
+.dn{background:#c0504d;box-shadow:0 0 8px #c0504d;}
+.bty{font-size:7.5px;letter-spacing:.35em;text-transform:uppercase;color:var(--cream-d);}
+.btg{margin-left:auto;font-family:'Space Mono',monospace;font-size:7px;letter-spacing:.2em;
+  color:var(--tp);border:1px solid var(--tp);padding:2px 8px;opacity:.7;transition:color .8s,border-color .8s;}
+.cn{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:400;
+  color:var(--cream);line-height:1.2;margin-bottom:8px;}
+.cd{font-size:10px;color:var(--cream-d);line-height:1.85;letter-spacing:.02em;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.cpr{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;
+  padding-top:14px;border-top:1px solid rgba(255,255,255,.05);}
+.cp{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:300;
+  color:var(--tp);line-height:1;transition:color .8s;}
+.cp sup{font-size:13px;vertical-align:super;opacity:.7;}
+.bn{font-family:'Cormorant Garamond',serif;font-size:19px;font-style:italic;
+  color:var(--cream);margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:10px;}
+.bd{font-size:10.5px;color:var(--cream-d);line-height:1.9;flex:1;}
+.bf{margin-top:12px;display:flex;justify-content:space-between;align-items:center;}
+.bp{font-family:'Space Mono',monospace;font-size:15px;color:var(--tp);transition:color .8s;}
+.bdi{font-size:7.5px;letter-spacing:.25em;color:var(--cream-d);text-transform:uppercase;opacity:.55;}
+
+/* Ripple */
+.rip{position:fixed;border-radius:50%;background:var(--tp);opacity:.14;
+  pointer-events:none;z-index:50;transform:translate(-50%,-50%) scale(0);
+  animation:ripO .8s ease forwards;}
+
+/* Keyframes */
+@keyframes ltIn{to{opacity:1;transform:translateY(0)}}
+@keyframes scan{to{left:130%}}
+@keyframes barF{to{width:100%}}
+@keyframes fIn{to{opacity:1}}
+@keyframes fUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes tickScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes orbP{0%,100%{transform:scale(1);opacity:.25}50%{transform:scale(1.06);opacity:.08}}
+@keyframes cIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ripO{to{transform:translate(-50%,-50%) scale(9);opacity:0}}
+
+@media(max-width:600px){
+  body{cursor:auto;}#cur{display:none;}button{cursor:pointer;}
+  .fc{height:auto;min-height:220px;}.fi{height:220px;}
+  .cgrid{grid-template-columns:1fr;}
+  .orb{width:108px;height:108px;}.orbs{gap:10px;}
+  .cta{padding:14px 32px;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="ld-logo">
+    <span>A</span><span>U</span><span>R</span><span>U</span><span>M</span>
+    <div class="ld-scan"></div>
+  </div>
+  <div class="ld-bar"></div>
+  <div class="ld-sub">Loading experience</div>
+</div>
+
+<canvas id="bg"></canvas>
+<div id="vig"></div>
+<div id="noise"></div>
+<div id="cur"></div>
+<div class="tl"></div>
+
+<div class="brand" id="brand">AURUM_01</div>
+<button id="sndBtn" onclick="snd.toggle(this)">♪ SOUND</button>
+<button id="bkBtn" onclick="goBack()">← BACK</button>
+<div id="catLbl"></div>
+<div class="pk">Designed by P.K. · 2025</div>
+
+<div id="app">
+
+  <!-- INTRO -->
+  <div class="panel active" id="pi">
+    <div class="eye">Est. 2019 · Fine Dining · Vijayawada</div>
+    <div class="ttl">Au<em>rum</em></div>
+    <div class="tag">// crafted for the senses</div>
+    <div class="tick-wrap"><div class="tick-inner" id="ticker"></div></div>
+    <button class="cta" onclick="goNav()">Enter the Menu</button>
+  </div>
+
+  <!-- CATEGORY NAV -->
+  <div class="panel" id="pn">
+    <div class="ntl">What would you like?</div>
+    <div class="orbs">
+      <div class="orb" style="--oc:#e8a020;--og:rgba(232,160,32,.32)" onclick="openCat('starters')">
+        <div class="orb-bg"></div><div class="orb-ring"></div>
+        <div class="orb-name">Starters</div><div class="orb-cnt">04 dishes</div>
+      </div>
+      <div class="orb" style="--oc:#c0392b;--og:rgba(192,57,43,.32)" onclick="openCat('mains')">
+        <div class="orb-bg"></div><div class="orb-ring"></div>
+        <div class="orb-name">Mains</div><div class="orb-cnt">06 dishes</div>
+      </div>
+      <div class="orb" style="--oc:#27ae60;--og:rgba(39,174,96,.32)" onclick="openCat('sides')">
+        <div class="orb-bg"></div><div class="orb-ring"></div>
+        <div class="orb-name">Sides</div><div class="orb-cnt">03 dishes</div>
+      </div>
+      <div class="orb" style="--oc:#c0608a;--og:rgba(192,96,138,.32)" onclick="openCat('desserts')">
+        <div class="orb-bg"></div><div class="orb-ring"></div>
+        <div class="orb-name">Desserts</div><div class="orb-cnt">04 dishes</div>
+      </div>
+      <div class="orb" style="--oc:#16a085;--og:rgba(22,160,133,.32)" onclick="openCat('drinks')">
+        <div class="orb-bg"></div><div class="orb-ring"></div>
+        <div class="orb-name">Drinks</div><div class="orb-cnt">04 drinks</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STARTERS -->
+  <div class="panel mp" id="ps">
+    <div class="mi">
+      <div class="mh">
+        <div class="mh-sub">To Begin</div>
+        <div class="mh-ttl">Starters</div>
+        <div class="hdiv"><div class="hdot"></div></div>
+      </div>
+      <div class="cgrid">
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Vegetarian</span><span class="btg">Chef's Pick</span></div>
+            <div class="cn">Truffle Arancini</div>
+            <div class="cd">Saffron risotto balls, black truffle cream, aged parmesan snow</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>420</div></div></div>
+          <div class="fb"><div class="bn">Truffle Arancini</div>
+            <div class="bd">Crispy saffron risotto balls filled with fontina cheese, black truffle cream, aged parmesan snow, microgreens, and edible gold leaf. A chef's signature since opening night.</div>
+            <div class="bf"><span class="bp">₹420</span><span class="bdi">Veg · Dairy</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dn"></span><span class="bty">Non-Veg</span><span class="btg">Signature</span></div>
+            <div class="cn">Seared Scallops</div>
+            <div class="cd">Pan-seared scallops, cauliflower purée, pancetta, caper beurre blanc</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>680</div></div></div>
+          <div class="fb"><div class="bn">Seared Scallops</div>
+            <div class="bd">Hand-dived scallops seared to golden perfection, on silky cauliflower purée, topped with crispy pancetta, caper beurre blanc, and caviar pearls.</div>
+            <div class="bf"><span class="bp">₹680</span><span class="bdi">Non-Veg · Shellfish</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Vegetarian</span><span class="btg">Seasonal</span></div>
+            <div class="cn">Burrata & Heritage Tomato</div>
+            <div class="cd">Imported burrata, heirloom tomatoes, 25yr balsamic, sourdough</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>540</div></div></div>
+          <div class="fb"><div class="bn">Burrata & Heritage Tomato</div>
+            <div class="bd">Fresh imported burrata, vine-ripened heirloom tomatoes, basil oil, 25-year aged balsamic reduction, fleur de sel, and toasted sourdough. Simple. Seasonal. Perfect.</div>
+            <div class="bf"><span class="bp">₹540</span><span class="bdi">Veg · Dairy</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dn"></span><span class="bty">Non-Veg</span><span class="btg">New</span></div>
+            <div class="cn">Foie Gras Torchon</div>
+            <div class="cd">Duck foie gras, fig jam, brioche, port wine reduction</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>860</div></div></div>
+          <div class="fb"><div class="bn">Foie Gras Torchon</div>
+            <div class="bd">Silky duck foie gras terrine, house-made fig jam, toasted brioche, micro herbs, and a 10-year port wine reduction. Indulgence at its most refined.</div>
+            <div class="bf"><span class="bp">₹860</span><span class="bdi">Non-Veg · Gluten</span></div></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAINS -->
+  <div class="panel mp" id="pm">
+    <div class="mi">
+      <div class="mh">
+        <div class="mh-sub">The Heart</div>
+        <div class="mh-ttl">Main Course</div>
+        <div class="hdiv"><div class="hdot"></div></div>
+      </div>
+      <div class="cgrid">
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dn"></span><span class="bty">Non-Veg</span><span class="btg">Premium</span></div>
+            <div class="cn">Wagyu Striploin</div>
+            <div class="cd">250g A4 wagyu, pomme purée, bone marrow jus, broccolini</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>2,400</div></div></div>
+          <div class="fb"><div class="bn">Wagyu Striploin</div>
+            <div class="bd">250g A4 Japanese wagyu striploin, cooked to preference, with Robuchon pomme purée, bone marrow jus, charred broccolini, herb oil, and fleur de sel. Our pinnacle dish.</div>
+            <div class="bf"><span class="bp">₹2,400</span><span class="bdi">Non-Veg · Beef</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Vegetarian</span><span class="btg">Chef's Pick</span></div>
+            <div class="cn">Wild Mushroom Risotto</div>
+            <div class="cd">Porcini, chanterelle, shimeji, arborio, black truffle, parmigiano</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>780</div></div></div>
+          <div class="fb"><div class="bn">Wild Mushroom Risotto</div>
+            <div class="bd">Porcini, chanterelle, and shimeji folded into creamy arborio, white wine reduction, 36-month parmigiano reggiano, shaved black truffle. Earthly perfection.</div>
+            <div class="bf"><span class="bp">₹780</span><span class="bdi">Veg · Dairy</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dn"></span><span class="bty">Non-Veg</span><span class="btg">Signature</span></div>
+            <div class="cn">Miso Glazed Salmon</div>
+            <div class="cd">Atlantic salmon, white miso, edamame purée, sesame dashi</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>1,100</div></div></div>
+          <div class="fb"><div class="bn">Miso Glazed Salmon</div>
+            <div class="bd">Atlantic salmon lacquered in white miso glaze, silky edamame purée, pickled daikon ribbons, warm sesame dashi broth. Japan meets fine dining.</div>
+            <div class="bf"><span class="bp">₹1,100</span><span class="bdi">Non-Veg · Fish · Soy</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Vegan</span><span class="btg">Plant-Based</span></div>
+            <div class="cn">Cauliflower Steak</div>
+            <div class="cd">Whole roasted cauliflower, chermoula, pomegranate, harissa broth</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>680</div></div></div>
+          <div class="fb"><div class="bn">Cauliflower Steak</div>
+            <div class="bd">Whole roasted cauliflower, spiced with chermoula, pomegranate molasses, toasted almonds, in aromatic harissa broth. Vegan luxury.</div>
+            <div class="bf"><span class="bp">₹680</span><span class="bdi">Vegan · GF</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dn"></span><span class="bty">Non-Veg</span><span class="btg">New</span></div>
+            <div class="cn">Duck Confit</div>
+            <div class="cd">72hr slow-cooked duck leg, lentil cassoulet, Morello cherry jus</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>1,350</div></div></div>
+          <div class="fb"><div class="bn">Duck Confit</div>
+            <div class="bd">72-hour slow-cooked duck leg, crisped to order, on lentil cassoulet with smoked sausage, Morello cherry jus and roasted root vegetables.</div>
+            <div class="bf"><span class="bp">₹1,350</span><span class="bdi">Non-Veg · Poultry</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dn"></span><span class="bty">Non-Veg</span><span class="btg">Bestseller</span></div>
+            <div class="cn">Lobster Thermidor</div>
+            <div class="cd">Half Boston lobster, cognac cream, gruyere gratin, tarragon</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>2,800</div></div></div>
+          <div class="fb"><div class="bn">Lobster Thermidor</div>
+            <div class="bd">Half Boston lobster gratinated with cognac cream sauce, gruyere cheese, fresh tarragon, garlic herb butter. A timeless French classic.</div>
+            <div class="bf"><span class="bp">₹2,800</span><span class="bdi">Non-Veg · Shellfish</span></div></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDES -->
+  <div class="panel mp" id="psi">
+    <div class="mi">
+      <div class="mh">
+        <div class="mh-sub">Accompaniments</div>
+        <div class="mh-ttl">Sides</div>
+        <div class="hdiv"><div class="hdot"></div></div>
+      </div>
+      <div class="cgrid">
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Vegetarian</span><span class="btg">Most Ordered</span></div>
+            <div class="cn">Truffle Fries</div>
+            <div class="cd">Double-fried Belgian potato, Périgord truffle oil, parmesan</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>320</div></div></div>
+          <div class="fb"><div class="bn">Truffle Fries</div>
+            <div class="bd">Double-fried Agria potatoes, Périgord black truffle oil, rosemary sea salt, aged parmesan. Our most-ordered side since day one. Dangerously addictive.</div>
+            <div class="bf"><span class="bp">₹320</span><span class="bdi">Veg · Dairy</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Vegetarian</span><span class="btg">Seasonal</span></div>
+            <div class="cn">Roasted Asparagus</div>
+            <div class="cd">Blanched asparagus, brown butter, shaved almonds, lemon zest</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>280</div></div></div>
+          <div class="fb"><div class="bn">Roasted Asparagus</div>
+            <div class="bd">Seasonal green asparagus, blanched then roasted, dressed with brown butter, shaved almonds, lemon zest, and sea salt flakes. Clean, simple, satisfying.</div>
+            <div class="bf"><span class="bp">₹280</span><span class="bdi">Veg · GF</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Vegetarian</span><span class="btg">Classic</span></div>
+            <div class="cn">Pomme Purée</div>
+            <div class="cd">Robuchon-style potato, cultured butter, crème fraîche, chives</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>260</div></div></div>
+          <div class="fb"><div class="bn">Pomme Purée</div>
+            <div class="bd">Joël Robuchon-inspired: equal parts potato and cultured butter, pressed through a fine sieve, crème fraîche, grey salt, chives. The purist's dream side.</div>
+            <div class="bf"><span class="bp">₹260</span><span class="bdi">Veg · Dairy</span></div></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DESSERTS -->
+  <div class="panel mp" id="pd">
+    <div class="mi">
+      <div class="mh">
+        <div class="mh-sub">Sweet Finale</div>
+        <div class="mh-ttl">Desserts</div>
+        <div class="hdiv"><div class="hdot"></div></div>
+      </div>
+      <div class="cgrid">
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Signature</span><span class="btg">Chef's Pick</span></div>
+            <div class="cn">Valrhona Fondant</div>
+            <div class="cd">70% dark chocolate, molten centre, vanilla ice cream, 24k gold</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>420</div></div></div>
+          <div class="fb"><div class="bn">Valrhona Fondant</div>
+            <div class="bd">70% Valrhona dark chocolate cake, guaranteed molten centre, Madagascar vanilla bean ice cream, 24k edible gold dust. Served warm. Pure theatre.</div>
+            <div class="bf"><span class="bp">₹420</span><span class="bdi">Veg · Dairy · Eggs</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Vegetarian</span><span class="btg">Seasonal</span></div>
+            <div class="cn">Mango Panna Cotta</div>
+            <div class="cd">Alphonso mango, coconut panna cotta, passion fruit gel, tuile</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>360</div></div></div>
+          <div class="fb"><div class="bn">Mango Panna Cotta</div>
+            <div class="bd">Silky coconut panna cotta, Alphonso mango purée, passion fruit gel, tuile, microbasil. India's finest fruit elevated to fine dining. Seasonal.</div>
+            <div class="bf"><span class="bp">₹360</span><span class="bdi">Veg · Dairy</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Vegetarian</span><span class="btg">Classic</span></div>
+            <div class="cn">Crème Brûlée</div>
+            <div class="cd">Vanilla custard, live torched caramel crust, seasonal berries</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>340</div></div></div>
+          <div class="fb"><div class="bn">Crème Brûlée</div>
+            <div class="bd">Classic vanilla custard, live-torched tableside to form a perfect caramel crust, fresh seasonal berries, almond shortbread. The timeless finish.</div>
+            <div class="bf"><span class="bp">₹340</span><span class="bdi">Veg · Dairy · Eggs</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Vegetarian</span><span class="btg">New</span></div>
+            <div class="cn">Pistachio Soufflé</div>
+            <div class="cd">Live-baked soufflé, crème anglaise, rose-water ice cream · 18min</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>480</div></div></div>
+          <div class="fb"><div class="bn">Pistachio Soufflé</div>
+            <div class="bd">Live-baked pistachio soufflé, risen to order. Crack the top tableside, pour in crème anglaise. Finished with rose-water ice cream. Order early — 18 min wait.</div>
+            <div class="bf"><span class="bp">₹480</span><span class="bdi">Veg · 18min wait</span></div></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRINKS -->
+  <div class="panel mp" id="pdr">
+    <div class="mi">
+      <div class="mh">
+        <div class="mh-sub">Libations</div>
+        <div class="mh-ttl">Drinks</div>
+        <div class="hdiv"><div class="hdot"></div></div>
+      </div>
+      <div class="cgrid">
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Mocktail</span><span class="btg">Bestseller</span></div>
+            <div class="cn">Rose Lychee Mist</div>
+            <div class="cd">Lychee, rose water, tonic, basil seed, edible flowers</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>280</div></div></div>
+          <div class="fb"><div class="bn">Rose Lychee Mist</div>
+            <div class="bd">Fresh lychee juice, rose water, tonic, soaked basil seeds, edible flowers, frozen rose petals. Delicate, floral, endlessly refreshing. Our most-photographed drink.</div>
+            <div class="bf"><span class="bp">₹280</span><span class="bdi">No Alcohol · Vegan</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Hot</span><span class="btg">Wellness</span></div>
+            <div class="cn">Ceremonial Matcha</div>
+            <div class="cd">Grade-A Uji matcha, oat milk, raw Nilgiri honey, microfoam</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>220</div></div></div>
+          <div class="fb"><div class="bn">Ceremonial Matcha</div>
+            <div class="bd">Grade-A Uji ceremonial matcha whisked to order, steamed oat milk, raw Nilgiri honey, soft microfoam. Clarity in a cup.</div>
+            <div class="bf"><span class="bp">₹220</span><span class="bdi">Vegan · No Alcohol</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Cold Brew</span><span class="btg">House</span></div>
+            <div class="cn">24hr Cold Brew</div>
+            <div class="cd">Ethiopian Yirgacheffe, cold-steeped 24hrs, crystal ice</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>240</div></div></div>
+          <div class="fb"><div class="bn">24hr Cold Brew</div>
+            <div class="bd">Single-origin Ethiopian Yirgacheffe, cold-steeped 24 hours, served over hand-carved crystal ice. Naturally sweet, zero bitterness. Optional oat milk.</div>
+            <div class="bf"><span class="bp">₹240</span><span class="bdi">Vegan · No Alcohol</span></div></div>
+        </div></div>
+        <div class="fc" onclick="this.classList.toggle('fl')"><div class="fi">
+          <div class="ff"><div class="cbr"><span class="dot dv"></span><span class="bty">Mocktail</span><span class="btg">New</span></div>
+            <div class="cn">Smoked Citrus Sour</div>
+            <div class="cd">Yuzu, lemon, smoked rosemary, aquafaba foam, smoke cloche</div>
+            <div class="cpr"><div class="cp"><sup>₹</sup>320</div></div></div>
+          <div class="fb"><div class="bn">Smoked Citrus Sour</div>
+            <div class="bd">Yuzu and lemon, smoked rosemary syrup, aquafaba foam, activated charcoal bitters. Served under a smoke cloche — lifted tableside to reveal the aroma. Theatre in a glass.</div>
+            <div class="bf"><span class="bp">₹320</span><span class="bdi">No Alcohol · Vegan</span></div></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─ THREE.JS ─
+const COLORS = {
+  def:      new THREE.Color(0xc9a84c),
+  starters: new THREE.Color(0xe8a020),
+  mains:    new THREE.Color(0xc0392b),
+  sides:    new THREE.Color(0x27ae60),
+  desserts: new THREE.Color(0xc0608a),
+  drinks:   new THREE.Color(0x16a085),
+};
+const canv = document.getElementById('bg');
+const renderer = new THREE.WebGLRenderer({canvas:canv,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,1000);
+cam.position.z = 50;
+
+// Particles
+const N = 320;
+const geo = new THREE.BufferGeometry();
+const pos = new Float32Array(N*3);
+const sz  = new Float32Array(N);
+for(let i=0;i<N;i++){
+  pos[i*3]   = (Math.random()-.5)*190;
+  pos[i*3+1] = (Math.random()-.5)*130;
+  pos[i*3+2] = (Math.random()-.5)*80;
+  sz[i] = Math.random()*2.4+.5;
+}
+geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+geo.setAttribute('size',new THREE.BufferAttribute(sz,1));
+
+const curC = new THREE.Color(0xc9a84c);
+const tgtC = new THREE.Color(0xc9a84c);
+const pMat = new THREE.ShaderMaterial({
+  uniforms:{t:{value:0},uC:{value:curC}},
+  vertexShader:`attribute float size;uniform float t;varying float va;
+    void main(){vec3 p=position;
+      p.y+=sin(t*.4+p.x*.04)*2.0;p.x+=cos(t*.3+p.y*.04)*1.5;
+      va=.25+.35*sin(t*.8+p.z*.1);
+      vec4 mv=modelViewMatrix*vec4(p,1.0);
+      gl_PointSize=size*(280.0/-mv.z);gl_Position=projectionMatrix*mv;}`,
+  fragmentShader:`uniform vec3 uC;varying float va;
+    void main(){float d=length(gl_PointCoord-vec2(.5));if(d>.5)discard;
+      gl_FragColor=vec4(uC,smoothstep(.5,0.,d)*va);}`,
+  transparent:true,depthWrite:false,
+});
+const pts = new THREE.Points(geo,pMat);
+scene.add(pts);
+
+// Shapes
+const shapes=[];
+const sGeos=[new THREE.OctahedronGeometry(2,0),new THREE.TetrahedronGeometry(1.8,0),new THREE.IcosahedronGeometry(1.5,0)];
+for(let i=0;i<10;i++){
+  const m=new THREE.Mesh(sGeos[i%3],
+    new THREE.MeshBasicMaterial({color:0xc9a84c,wireframe:true,transparent:true,opacity:.06}));
+  const s=Math.random()*1.5+.8;
+  m.scale.set(s,s,s);
+  m.position.set((Math.random()-.5)*160,(Math.random()-.5)*100,(Math.random()-.5)*60-10);
+  m.rotation.set(Math.random()*Math.PI,Math.random()*Math.PI,0);
+  scene.add(m);
+  shapes.push({m,sp:Math.random()*.004+.001,ph:Math.random()*Math.PI*2});
+}
+
+let mx=0,my=0,tmx=0,tmy=0;
+document.addEventListener('mousemove',e=>{mx=(e.clientX/innerWidth-.5)*2;my=(e.clientY/innerHeight-.5)*2;});
+
+let tick=0;
+(function loop(){requestAnimationFrame(loop);tick+=.01;
+  pMat.uniforms.t.value=tick;
+  curC.lerp(tgtC,.022); pMat.uniforms.uC.value=curC;
+  shapes.forEach(({m,sp,ph})=>{m.rotation.x+=sp;m.rotation.y+=sp*.7;
+    m.position.y+=Math.sin(tick*.5+ph)*.015;
+    m.material.color.lerp(tgtC,.012);});
+  tmx+=(mx-tmx)*.025; tmy+=(my-tmy)*.025;
+  pts.rotation.y=tmx*.1; pts.rotation.x=-tmy*.05;
+  renderer.render(scene,cam);
+})();
+window.addEventListener('resize',()=>{
+  cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);});
+
+function setTheme(cat){
+  tgtC.copy(COLORS[cat]||COLORS.def);
+  if(cat&&cat!=='def') document.body.dataset.cat=cat;
+  else delete document.body.dataset.cat;
+}
+
+// ─ CURSOR ─
+const curEl=document.getElementById('cur');
+document.addEventListener('mousemove',e=>{curEl.style.left=e.clientX+'px';curEl.style.top=e.clientY+'px';});
+document.querySelectorAll('button,.orb,.fc').forEach(el=>{
+  el.addEventListener('mouseenter',()=>curEl.classList.add('big'));
+  el.addEventListener('mouseleave',()=>curEl.classList.remove('big'));
+});
+
+// ─ RIPPLE ─
+document.addEventListener('click',e=>{
+  if(e.target.closest('.fc'))return;
+  const r=document.createElement('div');
+  r.className='rip';r.style.cssText=`left:${e.clientX}px;top:${e.clientY}px;width:60px;height:60px`;
+  document.body.appendChild(r);setTimeout(()=>r.remove(),800);
+});
+
+// ─ TICKER ─
+const TDATA=[
+  ['Wagyu Striploin','₹2,400'],['Truffle Arancini','₹420'],['Seared Scallops','₹680'],
+  ['Lobster Thermidor','₹2,800'],['Miso Salmon','₹1,100'],['Valrhona Fondant','₹420'],
+  ['Wild Mushroom Risotto','₹780'],['Duck Confit','₹1,350'],['Rose Lychee Mist','₹280'],
+  ['Truffle Fries','₹320'],['Pistachio Soufflé','₹480'],['Cold Brew','₹240'],
+];
+document.getElementById('ticker').innerHTML=
+  [...TDATA,...TDATA].map(([n,p])=>`<span class="ti"><span class="tn">${n}</span><span class="tp">${p}</span></span>`).join('');
+
+// ─ AMBIENT MUSIC ─
+const snd={
+  ctx:null,master:null,playing:false,
+  init(){
+    if(!window.AudioContext&&!window.webkitAudioContext)return;
+    this.ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const C=this.ctx;
+    this.master=C.createGain(); this.master.gain.value=0; this.master.connect(C.destination);
+    // Drone
+    [[55,0],[55.5,.5]].forEach(([f])=>{
+      const o=C.createOscillator(),g=C.createGain(),fi=C.createBiquadFilter();
+      o.type='sine';o.frequency.value=f;fi.type='lowpass';fi.frequency.value=280;g.gain.value=.45;
+      o.connect(fi);fi.connect(g);g.connect(this.master);o.start();
+    });
+    // Pad A minor (A3 C4 E4 G4)
+    [220,261.63,329.63,392].forEach(f=>{
+      const o=C.createOscillator(),g=C.createGain(),fi=C.createBiquadFilter();
+      o.type='triangle';o.frequency.value=f;fi.type='lowpass';fi.frequency.value=850;fi.Q.value=1.5;g.gain.value=.055;
+      o.connect(fi);fi.connect(g);g.connect(this.master);o.start();
+    });
+    // Shimmer
+    const sh=C.createOscillator(),sg=C.createGain(),lfo=C.createOscillator(),lg=C.createGain();
+    sh.type='triangle';sh.frequency.value=1320;lfo.type='sine';lfo.frequency.value=.2;lg.gain.value=.012;sg.gain.value=.025;
+    lfo.connect(lg);lg.connect(sg.gain);sh.connect(sg);sg.connect(this.master);sh.start();lfo.start();
+  },
+  toggle(btn){
+    if(!this.ctx){this.init();if(!this.ctx)return;}
+    if(this.ctx.state==='suspended')this.ctx.resume();
+    this.playing=!this.playing;
+    this.master.gain.setTargetAtTime(this.playing?.22:0,this.ctx.currentTime,1.8);
+    btn.textContent=this.playing?'♪ ON':'♪ SOUND';
+    btn.classList.toggle('playing',this.playing);
+  }
+};
+
+// ─ NAV ─
+let cur='intro';
+const PANEL_MAP={intro:'pi',nav:'pn',starters:'ps',mains:'pm',sides:'psi',desserts:'pd',drinks:'pdr'};
+const brandEl=document.getElementById('brand');
+const sndBtn=document.getElementById('sndBtn');
+const bkBtn=document.getElementById('bkBtn');
+const catLbl=document.getElementById('catLbl');
+
+function showPanel(id){
+  const oldEl=document.getElementById(PANEL_MAP[cur]);
+  if(oldEl){oldEl.classList.remove('active');oldEl.classList.add('exit');
+    setTimeout(()=>oldEl.classList.remove('exit'),700);}
+  setTimeout(()=>{
+    const newEl=document.getElementById(PANEL_MAP[id]);
+    if(newEl)newEl.classList.add('active');
+    // retrigger card animations
+    if(newEl)newEl.querySelectorAll('.fc').forEach(c=>{c.style.animation='none';c.offsetHeight;c.style.animation='';});
+  },80);
+  cur=id;
+  const isMenu=!['intro','nav'].includes(id);
+  bkBtn.classList.toggle('on',id!=='intro');
+  catLbl.classList.toggle('on',isMenu);
+  catLbl.textContent=isMenu?id.toUpperCase():'';
+  brandEl.classList.toggle('on',id!=='intro');
+  sndBtn.classList.toggle('on',id!=='intro');
+}
+function goNav(){setTheme('def');showPanel('nav');}
+function openCat(cat){setTheme(cat);showPanel(cat);}
+function goBack(){
+  if(cur==='nav'){setTheme('def');showPanel('intro');}
+  else{setTheme('def');showPanel('nav');}
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')goBack();});
+
+// ─ LOADER ─
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    const ld=document.getElementById('loader');
+    ld.classList.add('out');
+    setTimeout(()=>ld.style.display='none',800);
+  },2800);
+});
+</script>
+</body>
+</html>
