@@ -1,6 +1,12 @@
 # QR Menus — dine-in ordering setup
 
 ## What is included
+- Self-service restaurant signup and login at `/restaurant-portal.html`.
+- Tenant-separated restaurant profiles, owner memberships and menu item collections.
+- Restaurant managers can edit dish names, categories, descriptions, INR prices, image URLs and availability.
+- Live customer menu at `/restaurant-menu.html?restaurant=RESTAURANT_ID&table=01`; Firestore listeners publish menu/profile edits to open customer menus in real time.
+- Restaurant-specific table QR generator inside the portal.
+- Restaurant-specific order dashboard with membership-scoped order access.
 - Customer cart and checkout on the existing AURUM menu.
 - Table-aware ordering via `?table=04` (optionally `&restaurant=aurum-demo`).
 - Server-side item/price validation and Firestore order persistence.
@@ -48,6 +54,23 @@ The existing generic menu QR (without `table`) still displays the menu, but chec
 | `RAZORPAY_KEY_SECRET` | Online payments | Server-side order creation and signature verification |
 
 After adding or changing environment variables, redeploy the project. The repository's Git integration should deploy the connected branch automatically.
+
+## Restaurant portal and multi-tenant data model
+
+1. Restaurant owners register with email/password and create a restaurant profile.
+2. Each restaurant is stored at `restaurants/{restaurantId}`.
+3. Owner membership is stored at `restaurants/{restaurantId}/members/{uid}`; the signed-in user's restaurant mapping is stored at `userProfiles/{uid}`.
+4. Menu items live at `restaurants/{restaurantId}/menuItems/{itemId}`. The public menu subscribes to Firestore snapshots, so profile and menu edits appear without changing the QR destination.
+5. Table QRs point to `/restaurant-menu.html?restaurant={restaurantId}&table={tableId}`.
+6. Order creation reads the current Firestore item prices on the server and saves an immutable price/name snapshot in `orders`.
+
+The Firestore rules separate restaurant data by membership. Public users can read only active restaurant profiles and menu items; authenticated restaurant members can access their own workspace and orders. Menu writes are restricted to owner/manager roles. Order status updates are restricted to restaurant members. Admin SDK operations bypass Firestore rules and must remain server-side.
+
+## Current commercial-product boundaries
+- This is an MVP partner portal, not yet a hotel-chain enterprise console.
+- Signup does not verify legal business ownership or star classification; manually vet pilot hotels before enabling real customer orders.
+- Multi-outlet groups, manager invitations, approval workflows, audit history, POS/PMS integrations, custom domains, GST/service-charge configuration and SLA monitoring remain later releases.
+- Keep a manual onboarding path for 4- and 5-star hotel procurement teams; they often require vendor registration, security review and operational sign-off.
 
 ## Data model
 Orders are stored in the top-level Firestore collection `orders`. Each document contains a server-calculated item snapshot, table ID, INR total, payment method/status, order status, and timestamps. Customer browsers cannot read or write order documents directly. Server endpoints use Firebase Admin; staff access is controlled by the `staff: true` custom claim.
