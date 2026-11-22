@@ -17,7 +17,7 @@ The code is implemented, but it will not accept real orders until the configurat
 2. In Project settings, create/register a Web app if one does not already exist. Copy its Web config into `firebase-config.js` (replace the placeholder `apiKey` and `appId`; confirm the auth domain and project ID).
 3. Enable **Authentication → Email/Password**.
 4. Create a Firestore database if one does not exist.
-5. Publish the repository's `firestore.rules` to Firestore Rules.
+5. From the repository root, run `npx firebase-tools login` and then `npx firebase-tools deploy --only firestore:rules` (the `.firebaserc` and `firebase.json` files target `qr-menus-02kmp`).
 6. In Google Cloud/Firebase service accounts, create a service-account key and store the complete JSON as the Vercel environment variable `FIREBASE_SERVICE_ACCOUNT` for Production and Preview. Never commit this JSON.
 
 ## 2. Razorpay setup
