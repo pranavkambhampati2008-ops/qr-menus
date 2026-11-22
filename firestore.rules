@@ -1,14 +1,45 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isStaff() { return request.auth != null && request.auth.token.staff == true; }
+    function signedIn() { return request.auth != null; }
+    function isMember(rid) {
+      return signedIn() && exists(/databases/$(database)/documents/restaurants/$(rid)/members/$(request.auth.uid));
+    }
+    function canManage(rid) {
+      return isMember(rid) && get(/databases/$(database)/documents/restaurants/$(rid)/members/$(request.auth.uid)).data.role in ['owner', 'manager'];
+    }
+    match /restaurants/{rid} {
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid && request.resource.data.status == 'active';
+      allow read: if resource.data.status == 'active' || (signedIn() && (resource.data.ownerUid == request.auth.uid || isMember(rid)));
+      allow update: if canManage(rid) && request.resource.data.ownerUid == resource.data.ownerUid;
+      allow delete: if false;
+      match /members/{uid} {
+        allow read: if signedIn() && (request.auth.uid == uid || canManage(rid));
+        allow create: if signedIn() && request.auth.uid == uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.role == 'owner'
+          && get(/databases/$(database)/documents/restaurants/$(rid)).data.ownerUid == request.auth.uid;
+        allow update, delete: if canManage(rid) && resource.data.role != 'owner';
+      }
+      match /menuItems/{itemId} {
+        allow read: if get(/databases/$(database)/documents/restaurants/$(rid)).data.status == 'active' || isMember(rid);
+        allow create, update: if canManage(rid)
+          && request.resource.data.name is string
+          && request.resource.data.price is int
+          && request.resource.data.price > 0
+          && request.resource.data.price <= 200000
+          && request.resource.data.category is string
+          && request.resource.data.available is bool;
+        allow delete: if canManage(rid);
+      }
+    }
     match /orders/{orderId} {
-      allow read: if isStaff();
+      allow read: if resource.data.restaurantId is string && isMember(resource.data.restaurantId);
       allow create, delete: if false;
-      allow update: if isStaff()
+      allow update: if resource.data.restaurantId is string
+        && canManage(resource.data.restaurantId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
         && request.resource.data.status in ['new', 'accepted', 'preparing', 'ready', 'completed', 'cancelled'];
     }
-    match /{document=**} { allow read, write: if false; }
   }
 }
