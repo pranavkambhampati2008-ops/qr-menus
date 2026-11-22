@@ -2,42 +2,89 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+    function memberPath(rid, uid) {
+      return /databases/$(database)/documents/restaurants/$(rid)/members/$(uid);
+    }
     function isMember(rid) {
-      return signedIn() && exists(/databases/$(database)/documents/restaurants/$(rid)/members/$(request.auth.uid));
+      return signedIn() && exists(memberPath(rid, request.auth.uid));
+    }
+    function memberRole(rid) {
+      return get(memberPath(rid, request.auth.uid)).data.role;
     }
     function canManage(rid) {
-      return isMember(rid) && get(/databases/$(database)/documents/restaurants/$(rid)/members/$(request.auth.uid)).data.role in ['owner', 'manager'];
+      return isMember(rid) && memberRole(rid) in ['owner', 'manager'];
     }
+    function isOwner(rid) {
+      return isMember(rid) && memberRole(rid) == 'owner';
+    }
+
     match /restaurants/{rid} {
-      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid && request.resource.data.status == 'active';
-      allow read: if resource.data.status == 'active' || (signedIn() && (resource.data.ownerUid == request.auth.uid || isMember(rid)));
-      allow update: if canManage(rid) && request.resource.data.ownerUid == resource.data.ownerUid;
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'active'
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120;
+      allow read: if resource.data.status == 'active'
+        || (signedIn() && (resource.data.ownerUid == request.auth.uid || isMember(rid)));
+      allow update: if canManage(rid)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'contactName', 'email', 'phone', 'city', 'propertyType',
+          'brandColor', 'status', 'updatedAt'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.status in ['active', 'paused'];
       allow delete: if false;
+
       match /members/{uid} {
         allow read: if signedIn() && (request.auth.uid == uid || canManage(rid));
-        allow create: if signedIn() && request.auth.uid == uid
-          && request.resource.data.uid == request.auth.uid
-          && request.resource.data.role == 'owner'
-          && get(/databases/$(database)/documents/restaurants/$(rid)).data.ownerUid == request.auth.uid;
-        allow update, delete: if canManage(rid) && resource.data.role != 'owner';
+        allow create: if signedIn()
+          && isOwner(rid)
+          && request.resource.data.uid == uid
+          && request.resource.data.role in ['manager', 'staff']
+          && request.resource.data.email is string;
+        allow update, delete: if isOwner(rid)
+          && resource.data.role != 'owner'
+          && request.resource.data.role in ['manager', 'staff'];
       }
+
       match /menuItems/{itemId} {
         allow read: if get(/databases/$(database)/documents/restaurants/$(rid)).data.status == 'active' || isMember(rid);
         allow create, update: if canManage(rid)
+          && request.resource.data.keys().hasOnly([
+            'name', 'category', 'price', 'available', 'description',
+            'imageUrl', 'createdAt', 'updatedAt'
+          ])
           && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 80
           && request.resource.data.price is int
           && request.resource.data.price > 0
           && request.resource.data.price <= 200000
           && request.resource.data.category is string
-          && request.resource.data.available is bool;
+          && request.resource.data.category.size() > 0
+          && request.resource.data.category.size() <= 40
+          && request.resource.data.available is bool
+          && request.resource.data.description is string
+          && request.resource.data.description.size() <= 240
+          && request.resource.data.imageUrl is string
+          && request.resource.data.imageUrl.size() <= 2048;
         allow delete: if canManage(rid);
       }
     }
+
     match /userProfiles/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
-      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.restaurantId is string;
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['restaurantId', 'createdAt'])
+        && request.resource.data.restaurantId is string;
       allow update, delete: if false;
     }
+
     match /orders/{orderId} {
       allow read: if resource.data.restaurantId is string && isMember(resource.data.restaurantId);
       allow create, delete: if false;
