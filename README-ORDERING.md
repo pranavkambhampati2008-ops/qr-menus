@@ -34,7 +34,7 @@ The code is implemented, but it will not accept real orders until the configurat
 3. Staff signs in at `https://YOUR-DOMAIN/staff.html`. The staff claim is required to read orders and update order status.
 
 ## 4. Table QR format
-Each dine-in table must have a distinct QR URL, for example:
+Open `/qr-codes.html` on the deployed site to generate and download printable table QR codes in batches of up to 50. Each dine-in table must have a distinct QR URL, for example:
 - `https://YOUR-DOMAIN/?table=01&restaurant=aurum-demo`
 - `https://YOUR-DOMAIN/?table=02&restaurant=aurum-demo`
 
