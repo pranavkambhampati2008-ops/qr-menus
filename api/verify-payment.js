@@ -22,6 +22,10 @@ module.exports = async (req, res) => {
     const store = db(); const ref = store.collection("orders").doc(orderId); const snap = await ref.get();
     if (!snap.exists || snap.data().razorpayOrderId !== razorpay_order_id) return json(res, 404, { error: "Order not found for this payment." });
     if (snap.data().paymentStatus === "paid") return json(res, 200, { ok: true, orderId });
+    const auth = Buffer.from(process.env.RAZORPAY_KEY_ID + ":" + secret).toString("base64");
+    const paymentResponse = await fetch("https://api.razorpay.com/v1/payments/" + encodeURIComponent(razorpay_payment_id), { headers: { Authorization: "Basic " + auth } });
+    const payment = await paymentResponse.json();
+    if (!paymentResponse.ok || payment.order_id !== razorpay_order_id || payment.amount !== snap.data().total * 100 || payment.currency !== "INR" || payment.status !== "captured") return json(res, 409, { error: "Payment is not captured or does not match this order. Please contact the restaurant before retrying." });
     await ref.update({ paymentStatus: "paid", status: "new", razorpayPaymentId: razorpay_payment_id, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
     return json(res, 200, { ok: true, orderId });
   } catch (error) {
