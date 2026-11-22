@@ -41,14 +41,21 @@ service cloud.firestore {
 
       match /members/{uid} {
         allow read: if signedIn() && (request.auth.uid == uid || canManage(rid));
-        allow create: if signedIn()
-          && isOwner(rid)
-          && request.resource.data.uid == uid
-          && request.resource.data.role in ['manager', 'staff']
-          && request.resource.data.email is string;
-        allow update, delete: if isOwner(rid)
+        allow create: if signedIn() && (
+          (request.auth.uid == uid
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.role == 'owner'
+            && get(/databases/$(database)/documents/restaurants/$(rid)).data.ownerUid == request.auth.uid)
+          || (isOwner(rid)
+            && request.resource.data.uid == uid
+            && request.resource.data.role in ['manager', 'staff']
+            && request.resource.data.email is string)
+        );
+        allow update: if isOwner(rid)
           && resource.data.role != 'owner'
-          && request.resource.data.role in ['manager', 'staff'];
+          && request.resource.data.role in ['manager', 'staff']
+          && request.resource.data.uid == resource.data.uid;
+        allow delete: if isOwner(rid) && resource.data.role != 'owner';
       }
 
       match /menuItems/{itemId} {
